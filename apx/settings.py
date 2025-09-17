@@ -69,10 +69,18 @@ WSGI_APPLICATION = 'apx.wsgi.application'
 # Sinon, elle utilisera la BDD SQLite locale.
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
-        conn_max_age=600
+        default=os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True
     )
 }
+
+# Configuration SSL pour PostgreSQL sur Render
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
