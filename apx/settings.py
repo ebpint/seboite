@@ -69,7 +69,7 @@ WSGI_APPLICATION = 'apx.wsgi.application'
 # Sinon, elle utilisera la BDD SQLite locale.
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='sqlite:///db.sqlite3'),
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
         conn_max_age=600
     )
 }
