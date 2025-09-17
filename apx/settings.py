@@ -76,11 +76,23 @@ DATABASES = {
     )
 }
 
-# Configuration SSL pour PostgreSQL sur Render
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'require',
-    }
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL environment variable is required")
+
+DATABASES = {
+    'default': dj_database_url.parse(DATABASE_URL)
+}
+
+# Configuration SSL forcée pour PostgreSQL
+DATABASES['default']['OPTIONS'] = {
+    'sslmode': 'require',
+    'connect_timeout': 20,
+}
+
+# Configuration robuste pour les connexions
+DATABASES['default']['CONN_MAX_AGE'] = 600
+DATABASES['default']['CONN_HEALTH_CHECKS'] = True
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
