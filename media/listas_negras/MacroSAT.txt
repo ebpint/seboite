@@ -1,0 +1,1053 @@
+Sub SAT()
+    Dim oDoc As Object
+    Dim oSheet As Object
+    Dim oCell As Object
+    Dim lastRow As Long
+    Dim i As Long
+    Dim apellidos() As String
+    Dim nuevoContenido As String
+    oDoc = ThisComponent
+    oSheet = oDoc.Sheets(0) ' Selecciona la primera hoja
+
+    ' Encuentra la última fila con datos en la columna E
+    lastRow = oSheet.getCellRangeByName("E1:E" & oSheet.getRows().getCount()).getRangeAddress().EndRow
+    ' Itera desde la fila 0 hasta la última fila
+    For i = 0 To lastRow
+        oCell = oSheet.getCellByPosition(4, i) ' Columna E
+        If oCell.String = "F" Then
+            oCell = oSheet.getCellByPosition(1, i) ' Columna B
+
+            ' Remover dobles espacios y trim
+            Dim contenidoLimpio As String
+            contenidoLimpio = Trim(Replace(oCell.String, "  ", " ")) ' Reemplaza dobles espacios
+            While InStr(contenidoLimpio, "  ") > 0
+                contenidoLimpio = Replace(contenidoLimpio, "  ", " ")
+            Wend
+
+            apellidos = Split(contenidoLimpio, " ") ' Divide el contenido de la celda en apellidos
+
+            If UBound(apellidos) >= 1 Then ' Verifica que hay al menos dos apellidos
+                oSheet.getCellByPosition(3, i).String = apellidos(UBound(apellidos)) ' Último apellido a columna D
+                oSheet.getCellByPosition(2, i).String = apellidos(UBound(apellidos) - 1) ' Penúltimo apellido a columna C
+
+                ' Remueve el último y penúltimo apellido de la lista y actualiza la columna B
+                nuevoContenido = ""
+                Dim j As Long
+                For j = 0 To UBound(apellidos) - 2 ' Itera hasta el penúltimo apellido
+                    nuevoContenido = nuevoContenido & apellidos(j) & " "
+                Next j
+
+                ' Elimina el espacio extra al final
+                If Len(nuevoContenido) > 0 Then
+                    nuevoContenido = Trim(nuevoContenido)
+                End If
+
+                oCell.String = nuevoContenido ' Actualiza la celda en columna B
+            End If
+        End If
+    Next i 
+End Sub
+
+
+Public Function ObtenerApellidoPaterno(texto As String) As String
+    Dim palabras() As String
+    Dim resultado As String
+    Dim i As Long, posicion As Long
+    Dim particulas As Variant
+    
+    ' Definir las partículas que queremos detectar (Y como otra partícula)
+    particulas = Array("DE", "Y", "DEL", "DE LOS", "DE LA", "DE LAS")
+    
+    ' Convertir el texto a mayúsculas para comparación y eliminar espacios extras
+    texto = UCase(Trim(texto))
+    
+    ' Dividir el texto en palabras
+    palabras = Split(texto)
+    
+    ' Si hay menos de 2 palabras, devolver vacío
+    If UBound(palabras) < 1 Then
+        ObtenerApellidoPaterno = ""
+        Exit Function
+    End If
+    
+    ' Si hay exactamente 2 palabras, tomar la última como apellido paterno
+    If UBound(palabras) = 1 Then
+        ObtenerApellidoPaterno = UCase(palabras(1))
+        Exit Function
+    End If
+    
+    ' Por defecto, tomar la penúltima palabra como posición inicial
+    posicion = UBound(palabras) - 1
+    
+    ' Verificar casos especiales con partículas compuestas
+    If UBound(palabras) >= 2 Then
+        If posicion > 0 Then
+            Dim particula_compuesta As String
+            particula_compuesta = palabras(posicion - 1) & " " & palabras(posicion)
+            
+            If particula_compuesta = "DE LA" Or _
+               particula_compuesta = "DE LOS" Or _
+               particula_compuesta = "DE LAS" Then
+                posicion = posicion - 1
+            End If
+        End If
+    End If
+    
+    ' Verificar partículas simples
+    If UBound(palabras) >= 2 Then
+        If palabras(posicion) = "DE" Or _
+           palabras(posicion) = "Y" Or _
+           palabras(posicion) = "DEL" Then
+            posicion = posicion - 1
+        End If
+    End If
+    
+    ' Nuevas reglas para DE ALBA, DE ANDA y DE ALVA
+    If UBound(palabras) >= 1 Then
+        If palabras(posicion) = "ALBA" Or palabras(posicion) = "ANDA" Or palabras(posicion) = "ALVA" Then
+            If posicion > 0 And palabras(posicion - 1) = "DE" Then
+                resultado = palabras(posicion - 1) & " " & palabras(posicion) ' "DE ALBA", "DE ANDA" o "DE ALVA"
+                ObtenerApellidoPaterno = UCase(Trim(resultado))
+                Exit Function
+            End If
+        End If
+        
+        ' Verificar antepenúltima posición para DE ALBA, DE ANDA y DE ALVA
+        If posicion >= 2 Then
+            If (palabras(posicion) = "ALBA" Or palabras(posicion) = "ANDA" Or palabras(posicion) = "ALVA") And _
+               (palabras(posicion - 1) = "DE") Then
+                resultado = palabras(posicion - 1) & " " & palabras(posicion) ' "DE ALBA", "DE ANDA" o "DE ALVA"
+                ObtenerApellidoPaterno = UCase(Trim(resultado))
+                Exit Function
+            End If
+        End If
+    End If
+    
+    ' Si no hay partículas, usar solo la palabra en la posición calculada
+    resultado = palabras(posicion)
+    
+FormatearResultado:
+    ObtenerApellidoPaterno = UCase(Trim(resultado))
+End Function
+
+Public Function ObtenerApellidoMaterno(texto As String) As String
+    Dim palabras() As String
+    Dim resultado As String
+    Dim i As Long
+    Dim particulas As Variant
+    
+    ' Definir las partículas que queremos detectar (Y como otra partícula)
+    particulas = Array("DE", "Y", "DEL", "DE LOS", "DE LA", "DE LAS")
+    
+    ' Convertir el texto a mayúsculas para comparación
+    texto = UCase(Trim(texto))
+    
+    ' Dividir el texto en palabras
+    palabras = Split(texto)
+    
+    ' Si no hay palabras o hay menos de 3 palabras, devolver vacío
+    If UBound(palabras) < 2 Then
+        ObtenerApellidoMaterno = ""
+        Exit Function
+    End If
+    
+    ' Empezar con la última palabra
+    resultado = palabras(UBound(palabras))
+    
+    ' Verificar si hay una partícula antes de la última palabra
+    If UBound(palabras) >= 1 Then
+        ' Verificar partículas simples
+        For i = 0 To UBound(particulas)
+            If palabras(UBound(palabras) - 1) = particulas(i) Then
+                resultado = palabras(UBound(palabras) - 1) & " " & resultado
+                Exit For
+            End If
+        Next i
+        
+        ' Verificar casos "DE LOS", "DE LA", "DE LAS"
+        If UBound(palabras) >= 2 Then
+            If palabras(UBound(palabras) - 2) & " " & palabras(UBound(palabras) - 1) = "DE LOS" Or _
+               palabras(UBound(palabras) - 2) & " " & palabras(UBound(palabras) - 1) = "DE LA" Or _
+               palabras(UBound(palabras) - 2) & " " & palabras(UBound(palabras) - 1) = "DE LAS" Then
+                resultado = palabras(UBound(palabras) - 2) & " " & _
+                           palabras(UBound(palabras) - 1) & " " & _
+                           palabras(UBound(palabras))
+            End If
+        End If
+    End If
+    
+    ObtenerApellidoMaterno = UCase(Trim(resultado))
+End Function
+
+Public Function ObtenerNombre(texto As String, apellidoPaterno As String, apellidoMaterno As String) As String
+    Dim nombreCompleto As String
+    Dim resultado As String
+    Dim posPaterno As Long
+    Dim posMaterno As Long
+    
+    ' Eliminar espacios extras y convertir todo a mayúsculas para comparación
+    nombreCompleto = UCase(Trim(texto))
+    apellidoPaterno = UCase(Trim(apellidoPaterno))
+    apellidoMaterno = UCase(Trim(apellidoMaterno))
+    
+    ' Si no hay texto, devolver vacío
+    If Len(nombreCompleto) = 0 Then
+        ObtenerNombre = ""
+        Exit Function
+    End If
+    
+    ' Encontrar la posición del apellido paterno
+    posPaterno = InStr(nombreCompleto, apellidoPaterno)
+    
+    ' Si no hay apellido paterno, tomar todo hasta el materno
+    If posPaterno = 0 Then
+        posPaterno = InStr(nombreCompleto, apellidoMaterno)
+        If posPaterno = 0 Then
+            resultado = nombreCompleto
+        Else
+            resultado = Trim(Left(nombreCompleto, posPaterno - 1))
+        End If
+    Else
+        resultado = Trim(Left(nombreCompleto, posPaterno - 1))
+    End If
+    
+    ' Devolver el resultado en mayúsculas
+    ObtenerNombre = UCase(Trim(resultado))
+End Function
+
+    
+    Sub LimpiarSATconTipoDePersona()
+    Dim oDoc As Object
+    Dim oSheet As Object
+    Dim oCell As Object
+    Dim i As Long
+    Dim LastRow As Long
+    Dim newValue As String
+    Dim cellValue As String
+       
+ ' Obtener el documento actual y la hoja activa
+    oDoc = ThisComponent
+    oSheet = oDoc.CurrentController.ActiveSheet
+    
+    ' Encontrar la última fila de la columna B
+    LastRow = oSheet.getCellRangeByName("B1:B100000").getRows().getCount()
+    
+    ' Primera parte: Limpieza de datos
+    For i = 0 To LastRow - 1
+        oCell = oSheet.getCellByPosition(1, i) ' B es la columna 1 (índice 0)
+        
+        ' Verificar si la celda no está vacía
+        If oCell.String <> "" Then
+            ' Reemplazar puntos, comas y apóstrofes por un espacio
+            newValue = Replace(oCell.String, ".", " ")
+            newValue = Replace(newValue, ",", " ")
+            newValue = Replace(newValue, "'", " ")
+            newValue = Replace(newValue, "´", " ")
+            newValue = Replace(newValue, "-", " ")
+            newValue = Replace(newValue, """", "")  ' Elimina comillas dobles
+            
+            ' Eliminar acentos
+            newValue = Replace(newValue, "Á", "A")
+            newValue = Replace(newValue, "É", "E")
+            newValue = Replace(newValue, "Í", "I")
+            newValue = Replace(newValue, "Ó", "O")
+            newValue = Replace(newValue, "Ú", "U")
+            newValue = Replace(newValue, "À", "A")
+            newValue = Replace(newValue, "È", "E")
+            newValue = Replace(newValue, "Ì", "I")
+            newValue = Replace(newValue, "Ò", "O")
+            newValue = Replace(newValue, "Ù", "U")
+            newValue = Replace(newValue, "Â", "A")
+            newValue = Replace(newValue, "Ê", "E")
+            newValue = Replace(newValue, "Î", "I")
+            newValue = Replace(newValue, "Ô", "O")
+            newValue = Replace(newValue, "Û", "U")
+            newValue = Replace(newValue, "Ä", "A")
+            newValue = Replace(newValue, "Ë", "E")
+            newValue = Replace(newValue, "Ï", "I")
+            newValue = Replace(newValue, "Ö", "O")
+            newValue = Replace(newValue, "Ü", "U")
+            
+            ' Reemplazar caracteres especiales
+            newValue = Replace(newValue, "ADMINISTRACI?N", "ADMINISTRACION")
+            newValue = Replace(newValue, "AGR?COLA", "AGRICOLA")
+            newValue = Replace(newValue, "ASESOR?A", "ASESORIA")
+            newValue = Replace(newValue, "ASESOR?AS", "ASESORIAS")
+            newValue = Replace(newValue, "?LVAREZ", "ALVAREZ")
+            newValue = Replace(newValue, "AVI?A", "AVIÑA")
+            newValue = Replace(newValue, "ACU?A", "ACUÑA")
+            newValue = Replace(newValue, "ADRI?N", "ADRIAN")
+            newValue = Replace(newValue, "AGUST?N", "AGUSTIN")
+            newValue = Replace(newValue, "AL?N", "ALAN")
+            newValue = Replace(newValue, "?NGEL", "ANGEL")
+            newValue = Replace(newValue, "ALBA?EZ", "ALBAÑEZ")
+            newValue = Replace(newValue, "ASCENCI?N", "ASCENCION")
+            newValue = Replace(newValue, "ALTE?A", "ALTEÑA")
+            newValue = Replace(newValue, "ALBA?IL", "ALBAÑIL")
+            newValue = Replace(newValue, "AN?LISIS", "ANALISIS")
+            newValue = Replace(newValue, "ANTA?O", "ANTAÑO")
+            newValue = Replace(newValue, "ASOCIACI?N", "ASOCIACION")
+            newValue = Replace(newValue, "ARMON?A", "ARMONIA")
+            newValue = Replace(newValue, "ATENCI?N", "ATENCIÓN")
+            newValue = Replace(newValue, "AVENDA?O", "AVENDAÑO")
+            newValue = Replace(newValue, "?VILA", "AVILA")
+            newValue = Replace(newValue, "B?EZ", "BAEZ")
+            newValue = Replace(newValue, "BA?UELOS", "BAÑUELOS")
+            newValue = Replace(newValue, "BOLA?OS", "BOLAÑOS")
+            newValue = Replace(newValue, "BRISE?O", "BRISEÑO")
+            newValue = Replace(newValue, "BRICE?O", "BRICEÑO")
+            newValue = Replace(newValue, "BURGUE?O", "BURGUEÑO")
+            newValue = Replace(newValue, "CABA?AS", "CABAÑAS")
+            newValue = Replace(newValue, "CASTA?EDA", "CASTAÑEDA")
+            newValue = Replace(newValue, "COMPA?IA", "COMPAÑIA")
+            newValue = Replace(newValue, "CESE?A", "CESEÑA")
+            newValue = Replace(newValue, "CA?EDO", "CAÑEDO")
+            newValue = Replace(newValue, "CARRE?O", "CARREÑO")
+            newValue = Replace(newValue, "CA?ON", "CAÑON")
+            newValue = Replace(newValue, "CHÁVEZ", "CHAVEZ")
+            newValue = Replace(newValue, "CASTA?ON", "CASTAÑON")
+            newValue = Replace(newValue, "COUTI?O", "COUTIÑO")
+            newValue = Replace(newValue, "CA?ARTE", "CAÑARTE")
+            newValue = Replace(newValue, "CONSULTOR?A", "CONSULTORIA")
+            newValue = Replace(newValue, "DIN?MICA", "DINAMICA")
+            newValue = Replace(newValue, "DISE?O", "DISEÑO")
+            newValue = Replace(newValue, "DIVISI?N", "DIVISION")
+            newValue = Replace(newValue, "DUE?AS", "DUEÑAS")
+            newValue = Replace(newValue, "ESCARE?O", "ESCAREÑO")
+            newValue = Replace(newValue, "ESPECIALIZACI?N", "ESPECIALIZACION")
+            newValue = Replace(newValue, "FERN?NDEZ", "FERNANDEZ")
+            newValue = Replace(newValue, "GARC?A", "GARCIA")
+            newValue = Replace(newValue, "GARDU?O", "GARDUÑO")
+            newValue = Replace(newValue, "GUDI?O", "GUDIÑO")
+            newValue = Replace(newValue, "GESTI?N", "GESTION")
+            newValue = Replace(newValue, "GALV?N", "GALVAN")
+            newValue = Replace(newValue, "G?MEZ", "GOMEZ")
+            newValue = Replace(newValue, "GONZ?LEZ", "GONZALEZ")
+            newValue = Replace(newValue, "GUTI?RREZ", "GUTIERREZ")
+            newValue = Replace(newValue, "HERN?NDEZ", "HERNANDEZ")
+            newValue = Replace(newValue, "I?IGUEZ", "IÑIGUEZ")
+            newValue = Replace(newValue, "INGENIER?A", "INGENIERIA")
+            newValue = Replace(newValue, "INNOVACI?N", "INNOVACION")
+            newValue = Replace(newValue, "JARALE?O", "JARALEÑO")
+            newValue = Replace(newValue, "JES?S", "JESUS")
+            newValue = Replace(newValue, "JOS?", "JOSE")
+            newValue = Replace(newValue, "JOSU?", "JOSUE")
+            newValue = Replace(newValue, "L?PEZ", "LOPEZ")
+            newValue = Replace(newValue, "MADUE?O", "MADUEÑO")
+            newValue = Replace(newValue, "MU?OZ", "MUÑOZ")
+            newValue = Replace(newValue, "MONTA?O", "MONTAÑO")
+            newValue = Replace(newValue, "MAGA?A", "MAGAÑA")
+            newValue = Replace(newValue, "MAR?A", "MARIA")
+            newValue = Replace(newValue, "MARÍA", "MARIA")
+            newValue = Replace(newValue, "MART?N", "MARTIN")
+            newValue = Replace(newValue, "MART?NEZ", "MARTINEZ")
+            newValue = Replace(newValue, "M?NDEZ", "MENDEZ")
+            newValue = Replace(newValue, "M?RAZ", "MERAZ")
+            newValue = Replace(newValue, "M?XICO", "MEXICO")
+            newValue = Replace(newValue, "M?NICA", "MONICA")
+            newValue = Replace(newValue, "MUCI?O", "MUCIÑO")
+            newValue = Replace(newValue, "MONTA?EZ", "MONTAÑEZ")
+            newValue = Replace(newValue, "MU?IZ", "MUÑIZ")
+            newValue = Replace(newValue, "NI?O", "NIÑO")
+            newValue = Replace(newValue, "NU?EZ", "NUÑEZ")
+            newValue = Replace(newValue, "NU?O", "NUÑO")
+            newValue = Replace(newValue, "N?MERO", "NUMERO")
+            newValue = Replace(newValue, "ORDO?EZ", "ORDOÑEZ")
+            newValue = Replace(newValue, "ORDU?A", "ORDUÑA")
+            newValue = Replace(newValue, "ORTU?O", "ORTUÑO")
+            newValue = Replace(newValue, "OCA?AS", "OCAÑAS")
+            newValue = Replace(newValue, "PAC?FICO", "PACIFICO")
+            newValue = Replace(newValue, "PUBLICACI?N", "PUBLICACION")
+            newValue = Replace(newValue, "PE?UELAS", "PEÑUELAS")
+            newValue = Replace(newValue, "PATI?O", "PATIÑO")
+            newValue = Replace(newValue, "PE?A", "PEÑA")
+            newValue = Replace(newValue, "PE?AZOLA", "PEÑAZOLA")
+            newValue = Replace(newValue, "P?REZ", "PEREZ")
+            newValue = Replace(newValue, "PI?ON", "PIÑON")
+            newValue = Replace(newValue, "PI?A", "PIÑA")
+            newValue = Replace(newValue, "QUI?ONEZ", "QUIÑONEZ")
+            newValue = Replace(newValue, "RAZ?N", "RAZON")
+            newValue = Replace(newValue, "RAM?N", "RAMON")
+            newValue = Replace(newValue, "RODR?GUEZ", "RODRIGUEZ")
+            newValue = Replace(newValue, "R?OS", "RIOS")
+            newValue = Replace(newValue, "SALDA?A", "SALDAÑA")
+            newValue = Replace(newValue, "T?CNICA", "TECNICA")
+            newValue = Replace(newValue, "TECNOL?GICA", "TECNOLOGICA")
+            newValue = Replace(newValue, "TREVI?O", "TREVIÑO")
+            newValue = Replace(newValue, "VALD?Z", "VALDEZ")
+            newValue = Replace(newValue, "V?SQUEZ", "VASQUEZ")
+            newValue = Replace(newValue, "V?ZQUEZ", "VAZQUEZ")
+            newValue = Replace(newValue, "VEL?ZQUEZ", "VELAZQUEZ")
+            newValue = Replace(newValue, "V?CTOR", "VICTOR")
+            newValue = Replace(newValue, "VILLASE?OR", "VILLASEÑOR")
+            newValue = Replace(newValue, "YA?EZ", "YAÑEZ")
+            newValue = Replace(newValue, "ZU?IGA", "ZUÑIGA")
+            
+            ' Convertir en mayúsculas
+newValue = UCase(newValue)
+            
+            ' Eliminar espacios múltiples
+            Do While InStr(newValue, "   ") > 0 Or InStr(newValue, "  ") > 0
+                newValue = Replace(newValue, "   ", " ")
+                newValue = Replace(newValue, "  ", " ")
+            Loop
+            
+            ' Actualizar la celda con el nuevo valor
+            oCell.String = Trim(newValue)
+        End If
+    Next i
+    
+' Segunda parte: Verificación del tipo de sociedad
+For i = 1 To LastRow
+    ' Obtener el valor de la columna C (índice 2)
+   oCellB = oSheet.getCellByPosition(1, i)
+    cellValueB = oCellB.String
+    
+    oCell = oSheet.getCellByPosition(2, i)
+    cellValue = oCell.String
+    
+    ' Obtener la celda correspondiente en la columna D
+    Dim targetCell As Object
+    targetCell = oSheet.getCellByPosition(3, i)
+    
+    ' Si tanto la columna B como C están vacías, dejar la columna D en blanco
+    If Len(cellValueB) = 0 And Len(cellValue) = 0 Then
+        targetCell.String = ""
+    Else
+        ' Si la columna C está vacía, entonces verificar condiciones de la columna B
+        If Len(cellValue) = 0 Then
+        If Right(cellValueB, 3) = " SA" Or _
+           Right(cellValueB, 3) = " SC" Or _
+           Right(cellValueB, 4) = " S C" Or _
+           Right(cellValueB, 7) = " DE S S" Or _
+           Right(cellValueB, 6) = " DE RL" Or _
+           Right(cellValueB, 4) = " S A" Or _
+           Right(cellValueB, 4) = " A C" Or _
+           Right(cellValueB, 7) = " DE C V" Or _
+           Right(cellValueB, 7) = " DE R I" Or _
+           Right(cellValueB, 7) = " CO LTD" Or _
+           Right(cellValueB, 6) = " DE CV" Or _
+           Right(cellValueB, 4) = " ENR" Or _
+           Right(cellValueB, 6) = " E N R" Or _
+           Right(cellValueB, 4) = " SCP" Or _
+           Right(cellValueB, 4) = " LLC" Or _
+           Right(cellValueB, 4) = " FZE" Or _
+           Right(cellValueB, 6) = " S C P" Or _
+           Right(cellValueB, 21) = " SIN TIPO DE SOCIEDAD" Or _
+           Right(cellValueB, 9) = " SC DE RL" Or _
+           Right(cellValueB, 8) = " S DE RL" Or _
+           Right(cellValueB, 8) = " LIMITED" Or _
+           Right(cellValueB, 7) = " DE R L" Or _
+           Right(cellValueB, 9) = " DE RL MI" Or _
+           Right(cellValueB, 9) = " SA DE CV" Or _
+           Right(cellValueB, 11) = " S A DE C V" Or _
+           Right(cellValueB, 10) = " SPR DE RI" Or _
+           Right(cellValueB, 10) = " DE R L MI" Or _
+           Right(cellValueB, 9) = " RL DE CV" Or _
+           Right(cellValueB, 8) = " DE R.L." Or _
+           Right(cellValueB, 8) = " DE C.V." Or _
+           Right(cellValueB, 14) = " SC DE RL DE CV" Or _
+           Right(cellValueB, 7) = " S DE RL" Or _
+           Right(cellValueB, 13) = " S P R DE R L" Or _
+           Right(cellValueB, 3) = " AC" Or _
+           Right(cellValueB, 5) = " EN P" Or _
+           Right(cellValueB, 5) = " SARL" Or _
+           Right(cellValueB, 8) = " SPR DE RI" Then
+            targetCell.String = "M"
+        Else
+            targetCell.String = "F"
+        End If
+    Else
+        ' Mantener la lógica original para longitud de la columna C
+        If Len(cellValue) = 12 Then
+            targetCell.String = "M"
+        ElseIf Len(cellValue) = 13 Then
+            targetCell.String = "F"
+        Else
+            ' Si no cumple con la condición de longitud, 
+            ' entonces revisar las condiciones de la columna B
+                      
+            oCellB = oSheet.getCellByPosition(1, i)
+            cellValueB = oCellB.String
+            
+            ' Verificar todas las condiciones (mismo código anterior)
+            If Right(cellValueB, 3) = " SA" Or _
+           Right(cellValueB, 3) = " SC" Or _
+           Right(cellValueB, 4) = " S C" Or _
+           Right(cellValueB, 7) = " DE S S" Or _
+           Right(cellValueB, 6) = " DE RL" Or _
+           Right(cellValueB, 4) = " S A" Or _
+           Right(cellValueB, 4) = " A C" Or _
+           Right(cellValueB, 7) = " DE C V" Or _
+           Right(cellValueB, 7) = " DE R I" Or _
+           Right(cellValueB, 7) = " CO LTD" Or _
+           Right(cellValueB, 6) = " DE CV" Or _
+           Right(cellValueB, 4) = " ENR" Or _
+           Right(cellValueB, 6) = " E N R" Or _
+           Right(cellValueB, 4) = " SCP" Or _
+           Right(cellValueB, 4) = " LLC" Or _
+           Right(cellValueB, 4) = " FZE" Or _
+           Right(cellValueB, 6) = " S C P" Or _
+           Right(cellValueB, 21) = " SIN TIPO DE SOCIEDAD" Or _
+           Right(cellValueB, 9) = " SC DE RL" Or _
+           Right(cellValueB, 8) = " S DE RL" Or _
+           Right(cellValueB, 8) = " LIMITED" Or _
+           Right(cellValueB, 7) = " DE R L" Or _
+           Right(cellValueB, 9) = " DE RL MI" Or _
+           Right(cellValueB, 9) = " SA DE CV" Or _
+           Right(cellValueB, 11) = " S A DE C V" Or _
+           Right(cellValueB, 10) = " SPR DE RI" Or _
+           Right(cellValueB, 10) = " DE R L MI" Or _
+           Right(cellValueB, 9) = " RL DE CV" Or _
+           Right(cellValueB, 8) = " DE R.L." Or _
+           Right(cellValueB, 8) = " DE C.V." Or _
+           Right(cellValueB, 14) = " SC DE RL DE CV" Or _
+           Right(cellValueB, 7) = " S DE RL" Or _
+           Right(cellValueB, 13) = " S P R DE R L" Or _
+           Right(cellValueB, 3) = " AC" Or _
+           Right(cellValueB, 5) = " EN P" Or _
+           Right(cellValueB, 5) = " SARL" Or _
+           Right(cellValueB, 8) = " SPR DE RI" Then
+                targetCell.String = "M"
+            Else
+                targetCell.String = "F"
+            End If
+        End If
+    End If
+    End If
+Next i
+    
+    ' Mostrar mensaje de finalización
+    MsgBox "¡Limpieza de la lista del SAT terminada!", vbInformation, "Proceso Completado"
+    
+    End Sub
+    
+Sub SATHuimilpan()
+    Dim oDoc As Object
+    Dim oSourceSheet As Object
+    Dim oDestinationSheet As Object
+    Dim oRangeSource As Object
+    Dim oCellSource As Object
+    Dim oCellCondition As Object
+    Dim i As Long
+    Dim j As Long
+    Dim ligneDestination As Long
+    Dim concatenatedValue As String
+    Dim valeurB As String
+    Dim valeurC As String
+    Dim valeurD As String
+    Dim previousD As String
+    Dim CopierLigne As Boolean
+    
+    ' Recuperar el documento activo
+    oDoc = ThisComponent
+    
+    ' Acceder a la hoja "Nombres"
+    oSourceSheet = oDoc.Sheets.getByName("Nombres")
+    
+    ' Acceder a la hoja "HUIMILPAN"
+    oDestinationSheet = oDoc.Sheets.getByName("HUIMILPAN")
+    
+    ' Definir el rango a copiar
+    oRangeSource = oSourceSheet.getCellRangeByName("B2:V100000")
+    
+    ' Inicializar el contador de líneas para la hoja de destino
+    ligneDestination = 0
+    previousD = ""
+    
+    ' Recorrer cada celda del rango fuente
+    For i = 0 To oRangeSource.Rows.Count - 1
+        ' Vérifier la valeur de la cellule correspondante dans la colonne A
+        oCellCondition = oSourceSheet.getCellByPosition(0, i + 1)
+        
+        ' Vérifier si on trouve "N/A" dans la colonne A
+        If oCellCondition.String = "N/A" Then
+            Exit For
+        End If
+        
+        ' Obtener el valor de D actual
+        oCellSource = oRangeSource.getCellByPosition(0, i)
+        valeurD = oCellSource.String
+        
+        ' Logique de traitement basée sur la valeur de A
+        If oCellCondition.Value >= 2 Then
+            ' Para A >= 2, verificar los duplicados
+            If valeurD <> previousD Then
+                CopierLigne = True
+            Else
+                CopierLigne = False
+            End If
+        Else
+            ' Pour A < 2, toujours traiter la ligne
+            CopierLigne = True
+        End If
+        
+        If CopierLigne Then
+            ' Reorganizar las tres primeras columnas
+            ' Columna B (index 0) de la source vers colonne D (index 3) de destination
+            oDestinationSheet.getCellByPosition(3, ligneDestination).String = valeurD
+            
+            ' Columna C (index 1) de la source vers colonne B (index 1) de destination
+            oCellSource = oRangeSource.getCellByPosition(1, i)
+            valeurB = oCellSource.String
+            oDestinationSheet.getCellByPosition(1, ligneDestination).String = valeurB
+            
+            ' Columna D (índice 2) de la fuente hacia columna C (índice 2) de destino
+            oCellSource = oRangeSource.getCellByPosition(2, i)
+            valeurC = oCellSource.String
+            oDestinationSheet.getCellByPosition(2, ligneDestination).String = valeurC
+            
+            ' Construcción de la columna E
+            If Trim(valeurB) = "" And Trim(valeurC) = "" Then
+                ' Si B et C sont vides, copiar simplemente D en E
+                oDestinationSheet.getCellByPosition(4, ligneDestination).String = valeurD
+            Else
+                ' Sinon, concaténer B, C y D
+                concatenatedValue = valeurB & " " & valeurC & " " & valeurD
+                oDestinationSheet.getCellByPosition(4, ligneDestination).String = Trim(concatenatedValue)
+            End If
+            
+            ' Enlever les espaces en trop dans la colonne E
+            Dim cellE As Object
+            cellE = oDestinationSheet.getCellByPosition(4, ligneDestination)
+                   
+            ' Eliminar los espacios dobles de forma recursiva
+            Do While InStr(cellE.String, "  ") > 0
+                cellE.String = Replace(cellE.String, "  ", " ")
+            Loop
+
+            ' Copiar las demas columnas
+            For j = 6 To oRangeSource.Columns.Count - 1
+                If j < 8 Then
+                    oCellSource = oRangeSource.getCellByPosition(j, i)
+                    oDestinationSheet.getCellByPosition(j, ligneDestination).String = oCellSource.String
+                Else
+                    oCellSource = oRangeSource.getCellByPosition(j, i)
+                    oDestinationSheet.getCellByPosition(j + 1, ligneDestination).String = oCellSource.String
+                End If
+            Next j
+            
+            ' Ahora copiar el valor de la columna R (indice 17) hacia G (indice 6) y borrar R
+            Dim cellR As Object
+            cellR = oDestinationSheet.getCellByPosition(17, ligneDestination)
+            oDestinationSheet.getCellByPosition(6, ligneDestination).String = cellR.String
+            cellR.String = "" ' Effacer la valeur de la cellule dans la colonne R
+            
+            ' Ahora copiar el valor de la columna S (indice 18) hacia H (indice 6) y borrar S
+            Dim cellS As Object
+            cellS = oDestinationSheet.getCellByPosition(18, ligneDestination)
+            oDestinationSheet.getCellByPosition(7, ligneDestination).String = cellS.String
+            cellS.String = "" ' Effacer la valeur de la cellule dans la colonne S
+            
+            ' Incrémenter ligneDestination
+            ligneDestination = ligneDestination + 1
+        End If
+        
+        ' Mettre à jour la valeur D précédente si A >= 2
+        If oCellCondition.Value >= 2 Then
+            previousD = valeurD
+        End If
+    Next i
+    
+    ' Agregar 0 a la columna F si hay algo en la columna D
+    For i = 0 To ligneDestination - 1
+        If oDestinationSheet.getCellByPosition(3, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(5, i).String = "0" ' Colonne F (index 5)
+        Else
+            oDestinationSheet.getCellByPosition(5, i).String = "" ' Limpiar si no hay dato en D
+        End If
+    Next i
+    
+    ' Mostrar mensaje de finalización
+    MsgBox "¡Lista del SAT69 para Huimilpan terminada!", vbInformation, "Proceso Completado"        
+    
+End Sub
+
+Sub SATArroyo()
+    Dim oDoc As Object
+    Dim oSourceSheet As Object
+    Dim oDestinationSheet As Object
+    Dim oRangeSource As Object
+    Dim oCellSource As Object
+    Dim oCellCondition As Object
+    Dim i As Long, j As Long
+    Dim ligneDestination As Long
+    Dim previousD As String
+    Dim valeurD As String
+    Dim CopierLigne As Boolean
+    
+    ' Obtener el documento activo
+    oDoc = ThisComponent
+    ' Acceder a la hoja "Nombres"
+    oSourceSheet = oDoc.Sheets.getByName("Nombres")
+    ' Acceder a la hoja "ARROYO"
+    oDestinationSheet = oDoc.Sheets.getByName("ARROYO")
+    ' Definir el rango a copiar
+    oRangeSource = oSourceSheet.getCellRangeByName("B2:Q100000")
+    ' Inicializar el contador de líneas para la hoja de destino
+    ligneDestination = 1
+    previousD = ""
+    
+    ' Recorrer cada celda del rango fuente
+    For i = 0 To oRangeSource.Rows.Count - 1
+        ' Verificar el valor de la celda en la columna A de la siguiente línea
+        oCellCondition = oSourceSheet.getCellByPosition(0, i + 1)
+        
+        ' Verificar si se encuentra "N/A" en la columna A
+        If oCellCondition.String = "N/A" Then
+            Exit For
+        End If
+        
+        ' Obtener el valor D actual
+        oCellSource = oRangeSource.getCellByPosition(0, i)
+        valeurD = oCellSource.String
+        
+        ' Lógica de procesamiento basada en el valor de A de la siguiente línea
+        If oCellCondition.Value >= 2 Then
+            ' Para A >= 2, verificar duplicados
+            If valeurD <> previousD Then
+                CopierLigne = True
+                previousD = valeurD
+            Else
+                CopierLigne = False
+            End If
+        Else
+            ' Para A < 2, siempre procesar la línea
+            CopierLigne = True
+        End If
+        
+        ' Si la línea debe copiarse
+        If CopierLigne Then
+            ' Copiar la línea completa en la hoja de destino, excluyendo las columnas M y N
+            For j = 0 To oRangeSource.Columns.Count - 1
+                If j <> 11 And j <> 12 Then ' Evitar copiar las columnas M (12) y N (13)
+                    oCellSource = oRangeSource.getCellByPosition(j, i)
+                    oDestinationSheet.getCellByPosition(j + 1, ligneDestination).String = oCellSource.String
+                End If
+            Next j
+            
+            ' Copiar el valor de la columna J hacia la columna F
+            oDestinationSheet.getCellByPosition(5, ligneDestination).String = oDestinationSheet.getCellByPosition(9, ligneDestination).String
+            
+            ' Borrar el valor de la columna J
+            oDestinationSheet.getCellByPosition(9, ligneDestination).String = ""
+            
+            ' Verificar condiciones para copiar la columna F hacia Q
+            If oDestinationSheet.getCellByPosition(1, ligneDestination).String <> "" And _
+               oDestinationSheet.getCellByPosition(2, ligneDestination).String = "" And _
+               oDestinationSheet.getCellByPosition(3, ligneDestination).String = "" Then
+                
+                ' Copiar el valor de F hacia Q
+                oDestinationSheet.getCellByPosition(16, ligneDestination).String = oDestinationSheet.getCellByPosition(5, ligneDestination).String
+                
+                ' Borrar el valor de la columna F
+                oDestinationSheet.getCellByPosition(5, ligneDestination).String = ""
+            End If
+            
+            ligneDestination = ligneDestination + 1
+        End If
+    Next i
+    
+    ' Copiar valores de la columna S de Nombres a la columna H de ARROYO, empezando desde la segunda fila
+    For i = 1 To ligneDestination - 1  ' Empezamos desde 1 para saltar la primera fila
+        Dim valorColumnaS As String
+        valorColumnaS = oSourceSheet.getCellByPosition(18, i + 1).String  ' 18 es el índice de la columna S
+        oDestinationSheet.getCellByPosition(7, i).String = valorColumnaS  ' 7 es el índice de la columna H
+    Next i
+    
+' Agregar 0 a las columnas E y G si hay algo en la columna B
+    For i = 0 To ligneDestination - 1
+        If oDestinationSheet.getCellByPosition(1, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(6, i).String = "0" ' Columna G (índice 6)
+            oDestinationSheet.getCellByPosition(4, i).String = "0" ' Columna E (índice 4)
+        Else
+            oDestinationSheet.getCellByPosition(6, i).String = "" ' Limpiar columna G si no hay dato en B
+            oDestinationSheet.getCellByPosition(4, i).String = "" ' Limpiar columna E si no hay dato en B
+        End If
+    Next i
+    
+    ' Mostrar mensaje de finalización
+    MsgBox "¡Lista del SAT69 para Arroyo terminada!", vbInformation, "Proceso Completado"          
+  
+End Sub
+
+
+Sub SATTamazula()
+    Dim oDoc As Object
+    Dim oSourceSheet As Object
+    Dim oDestinationSheet As Object
+    Dim oRangeSource As Object
+    Dim oCellSource As Object
+    Dim oCellCondition As Object
+    Dim i As Long, j As Long
+    Dim ligneDestination As Long
+    Dim previousD As String
+    Dim valeurD As String
+    Dim CopierLigne As Boolean
+    
+    ' Obtener el documento activo
+    oDoc = ThisComponent
+    ' Acceder a la hoja "Nombres"
+    oSourceSheet = oDoc.Sheets.getByName("Nombres")
+    ' Acceder a la hoja "TAMAZULA"
+    oDestinationSheet = oDoc.Sheets.getByName("TAMAZULA")
+    ' Definir el rango a copiar
+    oRangeSource = oSourceSheet.getCellRangeByName("B2:Q100000")
+    ' Inicializar el contador de líneas para la hoja de destino
+    ligneDestination = 0
+    previousD = ""
+    
+    ' Recorrer cada celda del rango fuente
+    For i = 0 To oRangeSource.Rows.Count - 1
+        ' Verificar el valor de la celda en la columna A de la siguiente línea
+        oCellCondition = oSourceSheet.getCellByPosition(0, i + 1)
+        
+        ' Verificar si se encuentra "N/A" en la columna A
+        If oCellCondition.String = "N/A" Then
+            Exit For
+        End If
+        
+        ' Obtener el valor D actual
+        oCellSource = oRangeSource.getCellByPosition(0, i)
+        valeurD = oCellSource.String
+        
+        ' Lógica de procesamiento basada en el valor de A de la siguiente línea
+        If oCellCondition.Value >= 2 Then
+            ' Para A >= 2, verificar duplicados
+            If valeurD <> previousD Then
+                CopierLigne = True
+                previousD = valeurD
+            Else
+                CopierLigne = False
+            End If
+        Else
+            ' Para A < 2, siempre procesar la línea
+            CopierLigne = True
+        End If
+        
+        ' Si la línea debe copiarse
+        If CopierLigne Then
+            ' Copiar la línea completa en la hoja de destino, excluyendo las columnas M y N
+            For j = 0 To oRangeSource.Columns.Count - 1
+                If j <> 11 And j <> 12 Then ' Evitar copiar las columnas M (12) y N (13)
+                    oCellSource = oRangeSource.getCellByPosition(j, i)
+                    oDestinationSheet.getCellByPosition(j + 1, ligneDestination).String = oCellSource.String
+                End If
+            Next j
+            
+            ' Copiar el valor de la columna J hacia la columna F
+            oDestinationSheet.getCellByPosition(5, ligneDestination).String = oDestinationSheet.getCellByPosition(9, ligneDestination).String
+            
+            ' Borrar el valor de la columna J
+            oDestinationSheet.getCellByPosition(9, ligneDestination).String = ""
+            
+            ' Verificar condiciones para copiar la columna F hacia Q
+            If oDestinationSheet.getCellByPosition(1, ligneDestination).String <> "" And _
+               oDestinationSheet.getCellByPosition(2, ligneDestination).String = "" And _
+               oDestinationSheet.getCellByPosition(3, ligneDestination).String = "" Then
+                
+                ' Copiar el valor de F hacia Q
+                oDestinationSheet.getCellByPosition(16, ligneDestination).String = oDestinationSheet.getCellByPosition(5, ligneDestination).String
+                
+                ' Borrar el valor de la columna F
+                oDestinationSheet.getCellByPosition(5, ligneDestination).String = ""
+            End If
+            
+            ' Verificar condiciones para mover valor de B a P
+            If oDestinationSheet.getCellByPosition(1, ligneDestination).String <> "" And _
+               oDestinationSheet.getCellByPosition(2, ligneDestination).String = "" And _
+               oDestinationSheet.getCellByPosition(3, ligneDestination).String = "" Then
+                
+                ' Copiar el valor de B hacia P
+                oDestinationSheet.getCellByPosition(15, ligneDestination).String = oDestinationSheet.getCellByPosition(1, ligneDestination).String
+                
+                ' Borrar el valor de la columna B
+                oDestinationSheet.getCellByPosition(1, ligneDestination).String = ""
+                
+            End If
+            
+            ligneDestination = ligneDestination + 1
+        End If
+    Next i
+    
+' Agregar 0 a las columnas E y G si hay algo en la columna B o en la columna P
+    For i = 0 To ligneDestination - 1
+        If oDestinationSheet.getCellByPosition(1, i).String <> "" Or _
+           oDestinationSheet.getCellByPosition(15, i).String <> "" Then  ' Columna B (índice 1) o P (índice 15)
+            oDestinationSheet.getCellByPosition(6, i).String = "0" ' Columna G (índice 6)
+            oDestinationSheet.getCellByPosition(4, i).String = "0" ' Columna E (índice 4)
+        Else
+            oDestinationSheet.getCellByPosition(6, i).String = "" ' Limpiar columna G si no hay dato en B ni en P
+            oDestinationSheet.getCellByPosition(4, i).String = "" ' Limpiar columna E si no hay dato en B ni en P
+        End If
+    Next i
+    
+        ' Copiar valores de la columna S de Nombres a la columna H de TAMAZULA
+    For i = 0 To ligneDestination - 1
+        Dim valorColumnaS As String
+        valorColumnaS = oSourceSheet.getCellByPosition(18, i + 1).String  ' 18 es el índice de la columna S
+        oDestinationSheet.getCellByPosition(7, i).String = valorColumnaS  ' 7 es el índice de la columna H
+    Next i
+    
+    ' Mostrar mensaje de finalización
+    MsgBox "¡Lista del SAT69 para Tamazula terminada!", vbInformation, "Proceso Completado"          
+End Sub
+
+Function PrimeraLetraMayuscula(texto As String) As String
+    ' Convierte la primera letra en mayúscula y el resto en minúsculas
+    If Len(texto) > 0 Then
+        PrimeraLetraMayuscula = UCase(Left(texto, 1)) & LCase(Mid(texto, 2))
+    Else
+        PrimeraLetraMayuscula = texto
+    End If
+End Function
+
+Function CapitalizarPalabras(texto As String) As String
+    Dim palabras() As String
+    Dim i As Integer
+    Dim resultado As String
+    
+    ' Convertir todo a minúsculas primero
+    texto = LCase(texto)
+    ' Dividir el texto en palabras
+    palabras = Split(texto, " ")
+    
+    ' Capitalizar la primera letra de cada palabra
+    For i = 0 To UBound(palabras)
+        If Len(palabras(i)) > 0 Then
+            palabras(i) = UCase(Left(palabras(i), 1)) & Mid(palabras(i), 2)
+        End If
+    Next i
+    
+    ' Unir las palabras de nuevo
+    CapitalizarPalabras = Join(palabras, " ")
+End Function
+
+Sub SATLaMerced()
+    Dim oDoc As Object
+    Dim oSourceSheet As Object
+    Dim oDestinationSheet As Object
+    Dim oRangeSource As Object
+    Dim oCellSource As Object
+    Dim oCellCondition As Object
+    Dim i As Long, j As Long
+    Dim ligneDestination As Long
+    Dim previousD As String
+    Dim valeurD As String
+    Dim CopierLigne As Boolean
+    
+    ' Obtener el documento activo
+    oDoc = ThisComponent
+    ' Acceder a la hoja "Nombres"
+    oSourceSheet = oDoc.Sheets.getByName("Nombres")
+    ' Acceder a la hoja "LAMERCED"
+    oDestinationSheet = oDoc.Sheets.getByName("LAMERCED")
+    ' Definir el rango a copiar
+    oRangeSource = oSourceSheet.getCellRangeByName("B2:Q100000")
+    ' Inicializar el contador de líneas para la hoja de destino
+    ligneDestination = 0
+    previousD = ""
+    
+    ' Recorrer cada celda del rango fuente
+    For i = 0 To oRangeSource.Rows.Count - 1
+        ' Verificar el valor de la celda en la columna A de la siguiente línea
+        oCellCondition = oSourceSheet.getCellByPosition(0, i + 1)
+        
+        ' Verificar si se encuentra "N/A" en la columna A
+        If oCellCondition.String = "N/A" Then
+            Exit For
+        End If
+        
+        ' Obtener el valor D actual
+        oCellSource = oRangeSource.getCellByPosition(0, i)
+        valeurD = oCellSource.String
+        
+        ' Lógica de procesamiento basada en el valor de A de la siguiente línea
+        If oCellCondition.Value >= 2 Then
+            ' Para A >= 2, verificar duplicados
+            If valeurD <> previousD Then
+                CopierLigne = True
+                previousD = valeurD
+            Else
+                CopierLigne = False
+            End If
+        Else
+            ' Para A < 2, siempre procesar la línea
+            CopierLigne = True
+        End If
+        
+        ' Si la línea debe copiarse
+        If CopierLigne Then
+            ' Copiar la línea completa en la hoja de destino, excluyendo las columnas M y N
+            For j = 0 To oRangeSource.Columns.Count - 1
+                If j <> 11 And j <> 12 Then ' Evitar copiar las columnas M (12) y N (13)
+                    oCellSource = oRangeSource.getCellByPosition(j, i)
+                    oDestinationSheet.getCellByPosition(j + 1, ligneDestination).String = oCellSource.String
+                End If
+            Next j
+            
+            ' Copiar el valor de la columna J hacia la columna F
+            oDestinationSheet.getCellByPosition(5, ligneDestination).String = oDestinationSheet.getCellByPosition(9, ligneDestination).String
+            
+            ' Borrar el valor de la columna J
+            oDestinationSheet.getCellByPosition(9, ligneDestination).String = ""
+            
+            ' Verificar condiciones para copiar la columna F hacia Q
+            If oDestinationSheet.getCellByPosition(1, ligneDestination).String <> "" And _
+               oDestinationSheet.getCellByPosition(2, ligneDestination).String = "" And _
+               oDestinationSheet.getCellByPosition(3, ligneDestination).String = "" Then
+                
+                ' Copiar el valor de F hacia Q
+                oDestinationSheet.getCellByPosition(16, ligneDestination).String = oDestinationSheet.getCellByPosition(5, ligneDestination).String
+                
+                ' Borrar el valor de la columna F
+                oDestinationSheet.getCellByPosition(5, ligneDestination).String = ""
+            End If
+            
+            ligneDestination = ligneDestination + 1
+        End If
+    Next i
+    
+    ' Aplicar formato de texto a las columnas después de copiar todos los datos
+    For i = 0 To ligneDestination - 1
+        ' Columnas B, C, D (índices 1, 2, 3) - Primera letra de cada palabra en mayúscula
+        If oDestinationSheet.getCellByPosition(1, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(1, i).String = CapitalizarPalabras(oDestinationSheet.getCellByPosition(1, i).String)
+        End If
+        If oDestinationSheet.getCellByPosition(2, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(2, i).String = CapitalizarPalabras(oDestinationSheet.getCellByPosition(2, i).String)
+        End If
+        If oDestinationSheet.getCellByPosition(3, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(3, i).String = CapitalizarPalabras(oDestinationSheet.getCellByPosition(3, i).String)
+        End If
+        
+        ' Columnas J, K (índices 9, 10) - Solo primera letra en mayúscula
+        If oDestinationSheet.getCellByPosition(9, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(9, i).String = PrimeraLetraMayuscula(oDestinationSheet.getCellByPosition(9, i).String)
+        End If
+        If oDestinationSheet.getCellByPosition(10, i).String <> "" Then
+            oDestinationSheet.getCellByPosition(10, i).String = PrimeraLetraMayuscula(oDestinationSheet.getCellByPosition(10, i).String)
+        End If
+    Next i
+    
+    ' Copiar valores de la columna S de Nombres a la columna H de LAMERCED
+    For i = 0 To ligneDestination - 1
+        Dim valorColumnaS As String
+        valorColumnaS = oSourceSheet.getCellByPosition(18, i + 1).String  ' 18 es el índice de la columna S
+        oDestinationSheet.getCellByPosition(7, i).String = valorColumnaS  ' 7 es el índice de la columna H
+    Next i
+    
+    ' Mostrar mensaje de finalización
+    MsgBox "¡Lista del SAT69 para La Merced terminada!", vbInformation, "Proceso Completado"          
+End Sub
+
+Sub EjecutarLayoutSAT()
+
+    Call SATArroyo
+    Call SATTamazula
+    Call SATHuimilpan
+    Call SATLaMerced
+    
+End Sub
+
+

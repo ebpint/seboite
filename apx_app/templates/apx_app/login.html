@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Login - APX System{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-card">
+        <div class="text-center mb-4">
+            <i class="fas fa-shield-alt fa-3x text-primary mb-3"></i>
+            <h2 class="fw-bold text-dark">APX System</h2>
+            <p class="text-muted">Sistema de Prevención de Lavado</p>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="{{ form.username.id_for_label }}" class="form-label">
+                    <i class="fas fa-user me-2"></i>Usuario
+                </label>
+                {{ form.username }}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ form.password.id_for_label }}" class="form-label">
+                    <i class="fas fa-lock me-2"></i>Contraseña
+                </label>
+                {{ form.password }}
+            </div>
+            
+            <div class="mb-4">
+                <label for="{{ form.perfil.id_for_label }}" class="form-label">
+                    <i class="fas fa-id-badge me-2"></i>Perfil
+                </label>
+                {{ form.perfil }}
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100 py-2">
+                <i class="fas fa-sign-in-alt me-2"></i>Ingresar
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

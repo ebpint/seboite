@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - APX System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="sidebar">
+            <div class="p-3 border-bottom">
+                <h5 class="text-white"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</h5>
+            </div>
+            <a href="{% url 'apx_app:server' %}" class="d-flex align-items-center">
+                <i class="fas fa-server me-3"></i>Server
+            </a>
+            <a href="{% url 'apx_app:kyc' %}" class="d-flex align-items-center">
+                <i class="fas fa-user-check me-3"></i>KYC
+            </a>
+            <a href="{% url 'apx_app:cliente' %}" class="d-flex align-items-center">
+                <i class="fas fa-users me-3"></i>Cliente
+            </a>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="main-content">
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h1 class="h3 mb-3">
+                        <i class="fas fa-home me-2 text-primary"></i>Bienvenido al Sistema APX
+                    </h1>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Conectado como: <strong>{{ user.username }}</strong> -
+                        Perfil: <strong>{{ user_perfil }}</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <div class="card border-primary">
+                        <div class="card-body text-center">
+                            <i class="fas fa-server fa-2x text-primary mb-3"></i>
+                            <h5 class="card-title">Server</h5>
+                            <p class="card-text">Gestión de listas negras y operaciones</p>
+                            <a href="{% url 'apx_app:server' %}" class="btn btn-primary">
+                                <i class="fas fa-arrow-right me-1"></i>Acceder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card border-success">
+                        <div class="card-body text-center">
+                            <i class="fas fa-user-check fa-2x text-success mb-3"></i>
+                            <h5 class="card-title">KYC</h5>
+                            <p class="card-text">Know Your Customer</p>
+                            <a href="{% url 'apx_app:kyc' %}" class="btn btn-success">
+                                <i class="fas fa-arrow-right me-1"></i>Acceder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-3">
+                    <div class="card border-warning">
+                        <div class="card-body text-center">
+                            <i class="fas fa-users fa-2x text-warning mb-3"></i>
+                            <h5 class="card-title">Cliente</h5>
+                            <p class="card-text">Gestión de clientes</p>
+                            <a href="{% url 'apx_app:cliente' %}" class="btn btn-warning">
+                                <i class="fas fa-arrow-right me-1"></i>Acceder
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
