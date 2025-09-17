@@ -55,8 +55,14 @@ class ServerView(LoginRequiredMixin, View):
 
 class ListasNegrasView(LoginRequiredMixin, View):
     def get(self, request):
+        # En la solicitud GET, obtenemos el historial de la base de datos
         form = BlacklistForm()
-        return render(request, 'apx_app/listas_negras.html', {'form': form})
+        historial_listas_negras = ListaNegra.objects.all().order_by('-fecha_carga')
+        context = {
+            'form': form,
+            'historial_listas_negras': historial_listas_negras
+        }
+        return render(request, 'apx_app/listas_negras.html', context)
 
     def post(self, request):
         form = BlacklistForm(request.POST, request.FILES)
@@ -67,13 +73,25 @@ class ListasNegrasView(LoginRequiredMixin, View):
             messages.success(request, "El archivo de la lista negra se ha cargado correctamente.")
             return redirect('apx_app:listas_negras')
 
-        return render(request, 'apx_app/listas_negras.html', {'form': form})
+        # Si el formulario no es válido, volvemos a renderizar con los errores y el historial
+        historial_listas_negras = ListaNegra.objects.all().order_by('-fecha_carga')
+        context = {
+            'form': form,
+            'historial_listas_negras': historial_listas_negras
+        }
+        return render(request, 'apx_app/listas_negras.html', context)
 
 
 class OperacionesView(LoginRequiredMixin, View):
     def get(self, request):
+        # Agregamos la lógica para obtener y mostrar el historial de operaciones
         form = OperationForm()
-        return render(request, 'apx_app/operaciones.html', {'form': form})
+        historial_operaciones = Operacion.objects.all().order_by('-fecha_carga')
+        context = {
+            'form': form,
+            'historial_operaciones': historial_operaciones
+        }
+        return render(request, 'apx_app/operaciones.html', context)
 
     def post(self, request):
         form = OperationForm(request.POST, request.FILES)
@@ -84,7 +102,13 @@ class OperacionesView(LoginRequiredMixin, View):
             messages.success(request, "El archivo de operaciones se ha cargado correctamente.")
             return redirect('apx_app:operaciones')
 
-        return render(request, 'apx_app/operaciones.html', {'form': form})
+        # Si el formulario no es válido, volvemos a renderizar con los errores y el historial
+        historial_operaciones = Operacion.objects.all().order_by('-fecha_carga')
+        context = {
+            'form': form,
+            'historial_operaciones': historial_operaciones
+        }
+        return render(request, 'apx_app/operaciones.html', context)
 
 
 class KYCView(LoginRequiredMixin, View):
