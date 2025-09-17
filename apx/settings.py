@@ -16,7 +16,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-this')
 DEBUG = config('DEBUG', default=True, cast=bool)
 
 # Render mettra l'URL de votre application dans cette variable
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'your-app-name.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'https://seboite.onrender.com']
 
 
 # Application definition
